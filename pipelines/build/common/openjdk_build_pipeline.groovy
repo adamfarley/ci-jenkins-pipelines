@@ -325,6 +325,16 @@ class Build {
 
             // For each requested test, i.e 'sanity.openjdk', 'sanity.system', 'sanity.perf', 'sanity.external', call test job
             try {
+                // Skipping most tests on JDK8u with Hotspot for zLinux, because it has no JIT and takes up excessive machine time.
+                if ("${buildConfig.VARIANT}".equals("hotspot") && 
+                    "${buildConfig.JAVA_TO_BUILD}".equals("jdk8u") && 
+                    "${buildConfig.TARGET_OS}".contains("linux") && 
+                    "${buildConfig.ARCHITECTURE}".contains("390") && 
+                    !"${testType}".equals("sanity.openjdk")) {
+                        return;
+                }
+                
+                // Running tests if not skipped.
                 context.println "Running test: ${testType}"
                 testStages["${testType}"] = {
                     context.stage("${testType}") {
