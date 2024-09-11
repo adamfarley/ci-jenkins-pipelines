@@ -159,7 +159,8 @@ def getInProgressBuildUrl(String trssUrl, String variant, String featureRelease,
         }
     }
 
-    return inProgressBuildUrl
+    //return inProgressBuildUrl
+    return functionBuildUrl[0]
 }
 
 // Verify the given release contains all the expected assets
