@@ -118,6 +118,7 @@ def getLatestBinariesTag(String version) {
 // Make a best guess that the specified build of a given beta EA pipeline build is inprogress? if so return the buildUrl
 def getInProgressBuildUrl(String trssUrl, String variant, String featureRelease, String publishName, String scmRef) {
     def inProgressBuildUrl = ""
+    def functionBuildUrl = ["", "", ""]
 
     def featureReleaseInt = (featureRelease == "aarch32-jdk8u" || featureRelease == "alpine-jdk8u") ? 8 : featureRelease.replaceAll("[a-z]","").toInteger()
     def pipelineName = "openjdk${featureReleaseInt}-pipeline"
@@ -148,9 +149,11 @@ def getInProgressBuildUrl(String trssUrl, String variant, String featureRelease,
                     // alpine-jdk8u cannot be distinguished from jdk8u by the scmRef alone, so check for "x64AlpineLinux" in the targetConfiguration
                     if ((featureRelease == "alpine-jdk8u" && containsX64AlpineLinux) || (featureRelease != "alpine-jdk8u" && !containsX64AlpineLinux)) {
                         inProgressBuildUrl = job.buildUrl
+                        functionBuildUrl = [job.buildUrl, job.rootBuildId, job.status]
                     }
                 } else {
                     inProgressBuildUrl = job.buildUrl
+                     functionBuildUrl = [job.buildUrl, job.rootBuildId , job.status]
                 }
             }
         }
