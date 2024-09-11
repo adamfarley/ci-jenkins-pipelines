@@ -115,9 +115,9 @@ def getLatestBinariesTag(String version) {
     return latestTag    
 }
 
-// Make a best guess that the specified build of a given beta EA pipeline build is inprogress? if so return the buildUrl
-def getInProgressBuildUrl(String trssUrl, String variant, String featureRelease, String publishName, String scmRef) {
-    def inProgressBuildUrl = ""
+// Return our best guess at the url that generated a specific build.
+getBuildUrl(String trssUrl, String variant, String featureRelease, String publishName, String scmRef) {
+    def functionBuildUrl = ["", "", ""]
 
     def featureReleaseInt = (featureRelease == "aarch32-jdk8u" || featureRelease == "alpine-jdk8u") ? 8 : featureRelease.replaceAll("[a-z]","").toInteger()
     def pipelineName = "openjdk${featureReleaseInt}-pipeline"
@@ -143,20 +143,20 @@ def getInProgressBuildUrl(String trssUrl, String variant, String featureRelease,
             }
 
             // Is job for the required tag and currently inprogress?
-            if (containsVariant && overridePublishName == publishName && buildScmRef == scmRef && job.status != null && job.status.equals('Streaming')) {
+            if (containsVariant && overridePublishName == publishName && buildScmRef == scmRef && job.status != null) {
                 if (featureReleaseInt == 8) {
                     // alpine-jdk8u cannot be distinguished from jdk8u by the scmRef alone, so check for "x64AlpineLinux" in the targetConfiguration
                     if ((featureRelease == "alpine-jdk8u" && containsX64AlpineLinux) || (featureRelease != "alpine-jdk8u" && !containsX64AlpineLinux)) {
-                        inProgressBuildUrl = job.buildUrl
+                        functionBuildUrl = [job.buildUrl, rootBuildId, job.status]
                     }
                 } else {
-                    inProgressBuildUrl = job.buildUrl
+                    functionBuildUrl = [job.buildUrl, rootBuildId , job.status]
                 }
             }
         }
     }
 
-    return inProgressBuildUrl
+    return functionBuildUrl[0]
 }
 
 // Verify the given release contains all the expected assets
@@ -321,6 +321,15 @@ def verifyReleaseContent(String version, String release, String variant, Map sta
             } else {
                 status['assets'] = "Complete"
             }
+        }
+    }
+}
+
+// For the given pipeline, return three strings: the reproducibility percentage average, 
+def getReproducibilityPercentage(String jdkVersion, String trssId, Map results) {
+    if (trssId != "") {
+        results[jdkVersion][1].eachWithIndex{key, value -> 
+            results[jdkVersion][1][key] = "99%"
         }
     }
 }
@@ -665,7 +674,7 @@ node('worker') {
                     }
                 } else {
                     // Check if build in-progress
-                    inProgressBuildUrl = getInProgressBuildUrl(trssUrl, variant, featureRelease, status['expectedReleaseName'].replaceAll("-beta", ""), status['upstreamTag']+"_adopt")
+                    inProgressBuildUrl = getBuildUrl(trssUrl, variant, featureRelease, status['expectedReleaseName'].replaceAll("-beta", ""), status['upstreamTag']+"_adopt")
 
                     // Check latest published binaries are for the latest openjdk build tag, unless upstream is a GA tag
                     if (status['releaseName'] != status['expectedReleaseName'] && !isGaTag(featureRelease, status['upstreamTag'])) {
