@@ -115,9 +115,9 @@ def getLatestBinariesTag(String version) {
     return latestTag    
 }
 
-// Return our best guess at the url that generated a specific build.
-getBuildUrl(String trssUrl, String variant, String featureRelease, String publishName, String scmRef) {
-    def functionBuildUrl = ["", "", ""]
+// Make a best guess that the specified build of a given beta EA pipeline build is inprogress? if so return the buildUrl
+def getInProgressBuildUrl(String trssUrl, String variant, String featureRelease, String publishName, String scmRef) {
+    def inProgressBuildUrl = ""
 
     def featureReleaseInt = (featureRelease == "aarch32-jdk8u" || featureRelease == "alpine-jdk8u") ? 8 : featureRelease.replaceAll("[a-z]","").toInteger()
     def pipelineName = "openjdk${featureReleaseInt}-pipeline"
@@ -143,20 +143,20 @@ getBuildUrl(String trssUrl, String variant, String featureRelease, String publis
             }
 
             // Is job for the required tag and currently inprogress?
-            if (containsVariant && overridePublishName == publishName && buildScmRef == scmRef && job.status != null) {
+            if (containsVariant && overridePublishName == publishName && buildScmRef == scmRef && job.status != null && job.status.equals('Streaming')) {
                 if (featureReleaseInt == 8) {
                     // alpine-jdk8u cannot be distinguished from jdk8u by the scmRef alone, so check for "x64AlpineLinux" in the targetConfiguration
                     if ((featureRelease == "alpine-jdk8u" && containsX64AlpineLinux) || (featureRelease != "alpine-jdk8u" && !containsX64AlpineLinux)) {
-                        functionBuildUrl = [job.buildUrl, rootBuildId, job.status]
+                        inProgressBuildUrl = job.buildUrl
                     }
                 } else {
-                    functionBuildUrl = [job.buildUrl, rootBuildId , job.status]
+                    inProgressBuildUrl = job.buildUrl
                 }
             }
         }
     }
 
-    return functionBuildUrl[0]
+    return inProgressBuildUrl
 }
 
 // Verify the given release contains all the expected assets
@@ -674,7 +674,7 @@ node('worker') {
                     }
                 } else {
                     // Check if build in-progress
-                    inProgressBuildUrl = getBuildUrl(trssUrl, variant, featureRelease, status['expectedReleaseName'].replaceAll("-beta", ""), status['upstreamTag']+"_adopt")
+                    inProgressBuildUrl = getInProgressBuildUrl(trssUrl, variant, featureRelease, status['expectedReleaseName'].replaceAll("-beta", ""), status['upstreamTag']+"_adopt")
 
                     // Check latest published binaries are for the latest openjdk build tag, unless upstream is a GA tag
                     if (status['releaseName'] != status['expectedReleaseName'] && !isGaTag(featureRelease, status['upstreamTag'])) {
