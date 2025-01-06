@@ -42,6 +42,7 @@ class Builder implements Serializable {
     String activeNodeTimeout
     Map<String, List<String>> dockerExcludes
     boolean enableReproducibleCompare
+    boolean enableSecureMode
     boolean enableTests
     boolean enableTestDynamicParallel
     boolean enableInstallers
@@ -196,6 +197,7 @@ class Builder implements Serializable {
             PUBLISH_NAME: publishName,
             ADOPT_BUILD_NUMBER: adoptBuildNumber,
             ENABLE_REPRODUCIBLE_COMPARE: enableReproducibleCompare,
+            ENABLE_SECURE_MODE: enableSecureMode,
             ENABLE_TESTS: enableTests,
             ENABLE_TESTDYNAMICPARALLEL: enableTestDynamicParallel,
             ENABLE_INSTALLERS: enableInstallers,
@@ -232,7 +234,7 @@ class Builder implements Serializable {
         return ''
     }
     /*
-    Get reproduciableCompare flag from the build configurations.
+    Get reproducibleCompare flag from the build configurations.
     */
     Boolean isEnableReproducibleCompare(Map<String, ?> configuration, String variant) {
         Boolean enableReproducibleCompare = DEFAULTS_JSON['testDetails']['enableReproducibleCompare'] as Boolean
@@ -874,6 +876,7 @@ class Builder implements Serializable {
             context.echo "Java: ${javaToBuild}"
             context.echo "OS: ${targetConfigurations}"
             context.echo "Enable reproducible compare: ${enableReproducibleCompare}"
+            context.echo "Enable secure mode: ${enableSecureMode}"
             context.echo "Enable tests: ${enableTests}"
             context.echo "Enable Installers: ${enableInstallers}"
             context.echo "Enable Signer: ${enableSigner}"
@@ -1083,6 +1086,7 @@ return {
     String activeNodeTimeout,
     String dockerExcludes,
     String enableReproducibleCompare,
+    String enableSecureMode,
     String enableTests,
     String enableTestDynamicParallel,
     String enableInstallers,
@@ -1148,6 +1152,7 @@ return {
             activeNodeTimeout: activeNodeTimeout,
             dockerExcludes: buildsExcludeDocker,
             enableReproducibleCompare: Boolean.parseBoolean(enableReproducibleCompare),
+            enableSecureMode: Boolean.parseBoolean(enableSecureMode),
             enableTests: Boolean.parseBoolean(enableTests),
             enableTestDynamicParallel: Boolean.parseBoolean(enableTestDynamicParallel),
             enableInstallers: Boolean.parseBoolean(enableInstallers),

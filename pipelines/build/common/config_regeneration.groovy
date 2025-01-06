@@ -334,13 +334,36 @@ class Regeneration implements Serializable {
 
         return ''
     }
+
     /*
-    * Get reproduciableCompare flag from jdk*_pipeline_config.groovy. Used when creating the IndividualBuildConfig.
+    * Get reproducibleCompare flag from jdk*_pipeline_config.groovy. Used when creating the IndividualBuildConfig.
     * @param configuration
     * @param variant
     */
     Boolean isEnableReproducibleCompare(Map<String, ?> configuration, String variant) {
         Boolean enableReproducibleCompare = DEFAULTS_JSON['testDetails']['enableReproducibleCompare'] as Boolean
+        if (configuration.containsKey('reproducibleCompare')) {
+            def reproducibleCompare
+            if (isMap(configuration.reproducibleCompare)) {
+                reproducibleCompare = (configuration.reproducibleCompare as Map).get(variant)
+            } else {
+                reproducibleCompare = configuration.reproducibleCompare
+            }
+            if (reproducibleCompare != null) {
+                enableReproducibleCompare = reproducibleCompare
+            }
+        }
+        return enableReproducibleCompare
+    }
+
+    /*
+    * Get secureMode flag from jdk*_pipeline_config.groovy. Used when creating the IndividualBuildConfig.
+    * @param configuration
+    * @param variant
+    */
+    Boolean isEnableSecureMode(Map<String, ?> configuration, String variant) {
+        Boolean enableSecureMode = DEFAULTS_JSON['testDetails']['enableSecureMode'] as Boolean // amf23 left off here. 
+        // amf23 Should this be in testDetails? no. Where should it be? Is BUILD_CONFIGURATION available?
         if (configuration.containsKey('reproducibleCompare')) {
             def reproducibleCompare
             if (isMap(configuration.reproducibleCompare)) {
@@ -447,6 +470,8 @@ class Regeneration implements Serializable {
 
             def enableReproducibleCompare = isEnableReproducibleCompare(platformConfig, variant)
 
+            def enableSecureMode = 
+
             return new IndividualBuildConfig( // final build config
                 JAVA_TO_BUILD: javaToBuild,
                 ARCHITECTURE: platformConfig.arch as String,
@@ -484,6 +509,7 @@ class Regeneration implements Serializable {
                 PUBLISH_NAME: '',
                 ADOPT_BUILD_NUMBER: '',
                 ENABLE_REPRODUCIBLE_COMPARE: enableReproducibleCompare,
+                ENABLE_SECURE_MODE: enableSecureMode,
                 ENABLE_TESTS: DEFAULTS_JSON['testDetails']['enableTests'] as Boolean,
                 ENABLE_TESTDYNAMICPARALLEL: DEFAULTS_JSON['testDetails']['enableTestDynamicParallel'] as Boolean,
                 ENABLE_INSTALLERS: true,
