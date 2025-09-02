@@ -606,7 +606,7 @@ def getReproducibilityPercentage(String jdkVersion, String trssId, String trssUR
                 if ( trssTestJobNames.length() <= 2 ) {
                     def jenkinsJob = buildJob.url.replaceAll(/\u001b/, "").replaceAll(/\[8mha.*?\[0m/, "")
                     def jenkinsBuildOutput = callWgetSafely("${jenkinsJob}/job/${buildJob.buildName}/${buildJob.buildNum}/consoleText")
-                    if (jenkinsBuildOutput.contains("Starting building: ${testJobTitle}") {
+                    if (jenkinsBuildOutput.contains("Starting building: ${testJobTitle}")) {
                         def testJobId = ((jenkinsBuildOutput =~ /Started building\: ${testJobTitle} \#[0-9]+/)[0] =~ /\#[0-9]+/)[0]
                         testJobId = testJobId.substring(1)
                         def jenkinsTestOutput = callWgetSafely("https://ci.adoptium.net/job/${testJobTitle}/${testJobId}/consoleText")
