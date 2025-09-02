@@ -596,18 +596,41 @@ def getReproducibilityPercentage(String jdkVersion, String trssId, String trssUR
             assert buildJobNamesJson instanceof List
             buildIterator:
             for ( Map buildJob in buildJobNamesJson ) {
-                results[jdkVersion][1][onePlatform] = "???% - Build found, but no reproducibility tests. Build link: " + buildJob.buildUrl
+                results[jdkVersion][1][onePlatform] = "???% - Build found, but no reproducibility tests. Build link: " + buildJob.url
                 def testPlatform = platformConversionMap[onePlatform][1]
                 def reproTestName=platformReproTestMap[onePlatform][1]+"_0"
                 def reproTestBucket=platformReproTestMap[onePlatform][0]
-                def testJobTitle="Test_openjdk${jdkVersionInt}_hs_${reproTestBucket}_${testPlatform}.*"
-                def trssTestJobNames = callWgetSafely("${trssURL}/api/getAllChildBuilds?parentId=${buildJob._id}\\&buildNameRegex=^${testJobTitle}\$")
-                // Did this build have tests? If not, skip to next build job.
+                def testJobTitle="Test_openjdk${jdkVersionInt}_hs_${reproTestBucket}_${testPlatform}"
+                def trssTestJobNames = callWgetSafely("${trssURL}/api/getAllChildBuilds?parentId=${buildJob._id}\\&buildNameRegex=^${testJobTitle}.*\$")
+                // Did this build have tests? If not, check if jenkins has that information. Else, skip to next build job.
                 if ( trssTestJobNames.length() <= 2 ) {
-                    continue buildIterator
+                    def jenkinsJob = buildJob.url.replaceAll(/\u001b/, "").replaceAll(/\[8mha.*?\[0m/, "")
+                    def jenkinsBuildOutput = callWgetSafely("${jenkinsJob}/job/${buildJob.buildName}/${buildJob.buildNum}/consoleText")
+                    if (jenkinsBuildOutput.contains("Starting building: ${testJobTitle}") {
+                        def testJobId = ((jenkinsBuildOutput =~ /Started building\: ${testJobTitle} \#[0-9]+/)[0] =~ /\#[0-9]+/)[0]
+                        testJobId = testJobId.substring(1)
+                        def jenkinsTestOutput = callWgetSafely("https://ci.adoptium.net/job/${testJobTitle}/${testJobId}/consoleText")
+                        int testlistIndex = 0
+                        while (jenkinsTestOutput.contains("Starting building: ${testJobTitle}_testList_${testlistIndex}") {
+                            testJobId = ((jenkinsTestOutput =~ /Started building\: ${testJobTitle}_testList_${testlistIndex} \#[0-9]+/)[0] =~ /\#[0-9]+/)[0]
+                            testJobId = testJobId.substring(1)
+                            jenkinsTestOutput += callWgetSafely("https://ci.adoptium.net/job/${testJobTitle}_testList_${testlistIndex}/${testJobId}/consoleText")
+                            testlistIndex++
+                        }
+                        def matcherObject = jenkinsTestOutput =~ /ReproduciblePercent = (100|[0-9][0-9]?\.?[0-9]?[0-9]?) %/
+                        if ( matcherObject ) {
+                            reproResult = ((matcherObject[0] =~ /(100|[0-9][0-9]?\.?[0-9]?[0-9]?) %/)[0][0])
+                            results[jdkVersion][1][onePlatform] = reproResult
+                            echo "A reproducibility percentage of ${reproResult} was found for ${testPlatform}."
+                            continue platformIterator
+                        }
+                        continue buildIterator
+                    } else {
+                        continue buildIterator
+                    }
                 }
 
-                results[jdkVersion][1][onePlatform] = "???% - Found ${reproTestBucket}, but did not find ${reproTestName}. Build Link: " + buildJob.buildUrl
+                results[jdkVersion][1][onePlatform] = "???% - Found ${reproTestBucket}, but did not find ${reproTestName}. Build Link: " + buildJob.url
                 def testJobNamesJson = new JsonSlurper().parseText(trssTestJobNames)
 
                 // For each test job (including testList subjobs), we now search for the reproducibility test.
