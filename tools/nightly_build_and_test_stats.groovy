@@ -607,12 +607,20 @@ def getReproducibilityPercentage(String jdkVersion, String trssId, String trssUR
                     def jenkinsJob = buildJob.url.replaceAll(/\u001b/, "").replaceAll(/\[8mha.*?\[0m/, "")
                     def jenkinsBuildOutput = callWgetSafely("${jenkinsJob}/job/${buildJob.buildName}/${buildJob.buildNum}/consoleText")
                     if (jenkinsBuildOutput.contains("Starting building: ${testJobTitle}")) {
-                        def testJobId = ((jenkinsBuildOutput =~ /Started building\: ${testJobTitle} \#[0-9]+/)[0] =~ /\#[0-9]+/)[0]
+                        def testJobId = (jenkinsBuildOutput =~ /Starting building\: ${testJobTitle} \#[0-9]+/)
+                        if (!testJobId.asBoolean()) continue buildIterator
+                        testJobId = (testJobId[0] =~ /\#[0-9]+/)
+                        if (!testJobId.asBoolean()) continue buildIterator
+                        testJobId = testJobId[0]
                         testJobId = testJobId.substring(1)
                         def jenkinsTestOutput = callWgetSafely("https://ci.adoptium.net/job/${testJobTitle}/${testJobId}/consoleText")
                         int testlistIndex = 0
                         while (jenkinsTestOutput.contains("Starting building: ${testJobTitle}_testList_${testlistIndex}")) {
-                            testJobId = ((jenkinsTestOutput =~ /Started building\: ${testJobTitle}_testList_${testlistIndex} \#[0-9]+/)[0] =~ /\#[0-9]+/)[0]
+                            testJobId = (jenkinsTestOutput =~ /Starting building\: ${testJobTitle}_testList_${testlistIndex} \#[0-9]+/)
+                            if (!testJobId.asBoolean()) continue buildIterator
+                            testJobId = (testJobId[0] =~ /\#[0-9]+/)
+                            if (!testJobId.asBoolean()) continue buildIterator
+                            testJobId = testJobId[0]
                             testJobId = testJobId.substring(1)
                             jenkinsTestOutput += callWgetSafely("https://ci.adoptium.net/job/${testJobTitle}_testList_${testlistIndex}/${testJobId}/consoleText")
                             testlistIndex++
