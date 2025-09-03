@@ -594,6 +594,7 @@ def getReproducibilityPercentage(String jdkVersion, String trssId, String trssUR
 
             // For each build, search the test output for the unit test we need, then look for reproducibility percentage.
             assert buildJobNamesJson instanceof List
+            echo "debug 1"
             buildIterator:
             for ( Map buildJob in buildJobNamesJson ) {
                 results[jdkVersion][1][onePlatform] = "???% - Build found, but no reproducibility tests. Build link: " + buildJob.url
@@ -602,10 +603,12 @@ def getReproducibilityPercentage(String jdkVersion, String trssId, String trssUR
                 def reproTestBucket=platformReproTestMap[onePlatform][0]
                 def testJobTitle="Test_openjdk${jdkVersionInt}_hs_${reproTestBucket}_${testPlatform}"
                 def trssTestJobNames = callWgetSafely("${trssURL}/api/getAllChildBuilds?parentId=${buildJob._id}\\&buildNameRegex=^${testJobTitle}.*\$")
+                echo "debug 2"
                 // Did this build have tests? If not, check if jenkins has that information. Else, skip to next build job.
                 if ( trssTestJobNames.length() <= 2 ) {
                     def jenkinsJob = buildJob.url.replaceAll(/\u001b/, "").replaceAll(/\[8mha.*?\[0m/, "")
                     def jenkinsBuildOutput = callWgetSafely("${jenkinsJob}/job/${buildJob.buildName}/${buildJob.buildNum}/consoleText")
+                    echo "debug 3"
                     if (jenkinsBuildOutput.contains("Starting building: ${testJobTitle}")) {
                         def testJobId = (jenkinsBuildOutput =~ /Starting building\: ${testJobTitle} \#[0-9]+/)
                         if (!testJobId.asBoolean()) continue buildIterator
@@ -615,7 +618,9 @@ def getReproducibilityPercentage(String jdkVersion, String trssId, String trssUR
                         testJobId = testJobId.substring(1)
                         def jenkinsTestOutput = callWgetSafely("https://ci.adoptium.net/job/${testJobTitle}/${testJobId}/consoleText")
                         int testlistIndex = 0
+                        echo "debug 4"
                         while (jenkinsTestOutput.contains("Starting building: ${testJobTitle}_testList_${testlistIndex}")) {
+							echo "debug 5"
                             testJobId = (jenkinsTestOutput =~ /Starting building\: ${testJobTitle}_testList_${testlistIndex} \#[0-9]+/)
                             if (!testJobId.asBoolean()) continue buildIterator
                             testJobId = (testJobId[0] =~ /\#[0-9]+/)
